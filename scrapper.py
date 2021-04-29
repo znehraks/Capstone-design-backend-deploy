@@ -38,7 +38,7 @@ def scrapper(center_lat,
 
     driver.get(url)
     html = driver.page_source
-    soup = BeautifulSoup(html)
+    soup = BeautifulSoup(html, "lxml")
     site_json = json.loads(soup.find("body").text)
     driver.close()
 
