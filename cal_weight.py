@@ -12,9 +12,11 @@ from selenium.webdriver.common.by import By
 import time
 import io
 import sys
-
+from operator import itemgetter
 
 # 먼저 학교 이름으로 학교의 중심 위도,경도를 알아오기
+
+
 def find_address(univ_name):
     # 서울소재대학교 주소 csv에서 가져옴
     univ = open('seoul_universities.csv', 'r')
@@ -26,7 +28,7 @@ def find_address(univ_name):
             univ_address = i[8]
             break
     univ.close()
-    print(univ_address)
+    # print(univ_address)
 
     url = f"https://map.naver.com/v5/api/search?caller=pcweb&query={univ_address}"
 
@@ -45,58 +47,299 @@ def find_address(univ_name):
     return address_json
 
 
-address_json = find_address("경희대학교")
-try:
-    address_lon = float(address_json["result"]["place"]["list"][0]["x"])
-    address_lat = float(address_json["result"]["place"]["list"][0]["y"])
-except:
-    address_lon = float(
-        address_json["result"]["address"]["jibunsAddress"]["list"][0]["x"])
-    address_lat = float(
-        address_json["result"]["address"]["jibunsAddress"]["list"][0]["y"])
+def get_address_json(address_json):
+    try:
+        address_lon = float(address_json["result"]["place"]["list"][0]["x"])
+        address_lat = float(address_json["result"]["place"]["list"][0]["y"])
+    except:
+        address_lon = float(
+            address_json["result"]["address"]["jibunsAddress"]["list"][0]["x"])
+        address_lat = float(
+            address_json["result"]["address"]["jibunsAddress"]["list"][0]["y"])
+    return(address_lon,  address_lat)
+    # print(address_lat, address_lon)
 
-print(address_lat, address_lon)
 
 # 알아 온 위도, 경도를 바탕으로 상하좌우,중심 위도경도를 구함
-center_lat = address_lat
-center_lon = address_lon
-btm_lat = address_lat - 0.0159
-left_lon = address_lon - 0.0412
-top_lat = address_lat + 0.0159
-right_lon = address_lon + 0.0412
+def get_residence_address(address_lon, address_lat):
+    center_lat = address_lat
+    center_lon = address_lon
+    btm_lat = address_lat - 0.0159
+    left_lon = address_lon - 0.0412
+    top_lat = address_lat + 0.0159
+    right_lon = address_lon + 0.0412
 
+    site_json = scrapper(center_lat, center_lon, btm_lat,
+                         left_lon, top_lat, right_lon)
 
-site_json = scrapper(center_lat, center_lon, btm_lat,
-                     left_lon, top_lat, right_lon)
-
-items = site_json["data"]["ARTICLE"]
-refined_items = []
-for i in items:
-    refined_items.append({
-        "lgeo": i["lgeo"],
-        "count": i["count"],
-        "lat": i["lat"],
-        "lon": i["lon"]
-    })
-
+    items = site_json["data"]["ARTICLE"]
+    refined_items = []
+    for i in items:
+        refined_items.append({
+            "lgeo": i["lgeo"],
+            "count": i["count"],
+            "lat": i["lat"],
+            "lon": i["lon"]
+        })
+    return refined_items
 # 나온 매물 리스트들 좌표로 각각의 lgeo를 인덱스로 하여
-
 # 그 lego의 lat, lon을 이용한 거리이용 가중치를 모두 구함
 # 학교 좌표와 해당 매물과의 거리를 모두 구하여(맨하탄거리) 1위부터 꼴찌까지 가중치를 구함(이전에, Q2의 최대거리에서 필터링하여 해당 거리를 벗어나는 좌표에 있는 항목은 이 단계에서 걸러냄)
 
 
+def cal_T1(refined_residence, univ_lon, univ_lat):
+    # 맨하탄거리의 합으로 이루어진 배열 생성 후 저장
+    taxicab_geom = []
+    for i in refined_residence:
+        taxicab_geom.append({"lgeo": i["lgeo"], "dist":
+                             abs(i["lat"]-univ_lat)+abs(i["lon"]-univ_lon), "lat": i["lat"], "lon": i["lon"]})
+    # 가까운 순으로 정렬
+    sorted_taxicab_geom = sorted(
+        taxicab_geom, key=itemgetter('dist'))
+
+    # 맨하탄거리로 서열을 매겨 총 개수로 나눈 후 100점 만점(1위) 부터 0점까지(꼴찌) 1위부터 높은 점수로 배열함
+    # ex.총 매물이 50일 경우, 1위가 100점, 2위가 98점, 3위가 96점 ... 50위가 0점 (동률에 대한 고려는 추후에 함)
+    res = []
+    len_sorted_taxicab_geom = len(sorted_taxicab_geom)
+    # print(len_sorted_taxicab_geom)
+    for index, i in enumerate(sorted_taxicab_geom):
+        res.append({"lgeo": i["lgeo"], "dist": i["dist"], "lat": i["lat"], "lon": i["lon"],
+                    "T1_weight": 100*(1/len_sorted_taxicab_geom)*(len_sorted_taxicab_geom-index)})
+    return res
+
 # 각 매물에서 해당 구에 속한 지하철역중 가장 가까운 것의 거리를 가중치로 매겨서 그것 역시 1위부터 꼴찌까지 가중치로 매김
 
 
+def cal_T2(refined_residence):
+    # 각각의 매물이 어느 지하철역이랑 가깝고(1개) 얼마나 가까운지 맨하탄거리로 표시
+    # 지하철csv 불러옴
+    subway = open('subway_refined.csv', 'r')
+    subway_r = csv.reader(subway)
+    subway_r_list = list(subway_r)
+    # 중간결과를 담을 subway_list 생성
+    subway_list = []
+
+    # 매물리스트를 outer에 지하철리스트를 inner에 두고 각 매물에서 모든 지하철역과의 거리를 계산하여
+    # 가장 가까운 지하철 역과 그 역과의 거리를 구함
+    for index_r, i in enumerate(refined_residence):
+        # 임시로 매물과 모든역과의 거리를 계산할 리스트
+        temp = []
+        for index_s, j in enumerate(subway_r_list):
+            if(index_s == 0):
+                continue
+            temp.append(abs(i["lat"] - float(j[7])) +
+                        abs(i["lon"] - float(j[8])))
+            if(index_s == len(subway_r_list)-1):
+                subway_list.append({"lgeo": i["lgeo"], "nearest": temp.index(
+                    min(temp))+1, "subway_dist": min(temp)})
+
+    subway.close()
+    # 거리가 가까운 순으로 정렬함
+    sorted_subway_list = sorted(
+        subway_list, key=itemgetter('subway_dist'))
+
+    # 최종결과를 담을 리스트 생성
+    res = []
+
+    len_sorted_subway_list = len(sorted_subway_list)
+
+    # T2최종 가중치 추산을 위한 계산작업
+    for index, i in enumerate(sorted_subway_list):
+        res.append({"lgeo": i["lgeo"], "nearest": i["nearest"], "subway_dist": i["subway_dist"],
+                    "T2_weight": 100*(1/len_sorted_subway_list)*(len_sorted_subway_list-index)})
+    return res
+
+    # 맨하탄거리로 서열을 매겨 총 개수로 나눈 후 100점 만점(1위) 부터 0점까지(꼴찌) 1위부터 높은 점수로 배열함
+    # ex.총 매물이 50일 경우, 1위가 100점, 2위가 98점, 3위가 96점 ... 50위가 0점 (동률에 대한 고려는 추후에 함)
+
+
+# 각 매물이 속한 구별 물가로 가중치 합산함
+def cal_T3(refined_residence):
+    # 물가 csv 불러옴
+    price = open('price_refined.csv', 'r')
+    price_r = csv.reader(price)
+    price_r_list = list(price_r)
+    # 중간결과 담을 리스트
+    price_list = []
+
+    # 매물리스트를 outer에 지하철리스트를 inner에 두고 각 매물에서 모든 구 와의 거리를 계산하여
+    # 가장 가까운 구와 그 구와의 거리를 구함
+    for index_r, i in enumerate(refined_residence):
+        # 임시로 구와 모든매물과의 거리를 계산할 리스트
+        temp = []
+        for index_p, j in enumerate(price_r_list):
+            if(index_p == 0):
+                continue
+            temp.append(abs(i["lat"] - float(j[5])) +
+                        abs(i["lon"] - float(j[6])))
+            if(index_p == len(price_r_list)-1):
+                price_list.append({"lgeo": i["lgeo"], "nearest": temp.index(
+                    min(temp))+1, "gu_dist": min(temp)})
+
+    price.close()
+    # 거리가 가까운 순으로 정렬함
+    sorted_price_list = sorted(
+        price_list, key=itemgetter('gu_dist'))
+
+    # 최종결과를 담을 리스트 생성
+    res = []
+
+    len_sorted_price_list = len(sorted_price_list)
+
+    # T3최종 가중치 추산을 위한 계산작업
+    for index, i in enumerate(sorted_price_list):
+        res.append({"lgeo": i["lgeo"], "nearest": i["nearest"], "gu_dist": i["gu_dist"],
+                    "T3_weight": int(price_r_list[int(i["nearest"])][4])})
+    return res
+
 # 구 별 범죄율로 가중치 구함(위도,경도 값으로 해당 점이 어느 구에 속하는지 판별 후, 그 구의 범죄율 가중치로 정함)
 
+
+def cal_T4(refined_residence):
+     # 범죄율 csv 불러옴
+    crime = open('crime_refined.csv', 'r')
+    crime_r = csv.reader(crime)
+    crime_r_list = list(crime_r)
+    # 중간결과 담을 리스트
+    crime_list = []
+
+    # 매물리스트를 outer에 지하철리스트를 inner에 두고 각 매물에서 모든 구 와의 거리를 계산하여
+    # 가장 가까운 구와 그 구와의 거리를 구함
+    for index_r, i in enumerate(refined_residence):
+        # 임시로 구와 모든매물과의 거리를 계산할 리스트
+        temp = []
+        for index_c, j in enumerate(crime_r_list):
+            if(index_c == 0):
+                continue
+            temp.append(abs(i["lat"] - float(j[3])) +
+                        abs(i["lon"] - float(j[4])))
+            if(index_c == len(crime_r_list)-1):
+                crime_list.append({"lgeo": i["lgeo"], "nearest": temp.index(
+                    min(temp))+1, "gu_dist": min(temp)})
+
+    crime.close()
+    # 거리가 가까운 순으로 정렬함
+    sorted_crime_list = sorted(
+        crime_list, key=itemgetter('gu_dist'))
+
+    # 최종결과를 담을 리스트 생성
+    res = []
+
+    len_sorted_crime_list = len(sorted_crime_list)
+
+    # T4최종 가중치 추산을 위한 계산작업
+    for index, i in enumerate(sorted_crime_list):
+        res.append({"lgeo": i["lgeo"], "nearest": i["nearest"], "gu_dist": i["gu_dist"],
+                    "T4_weight": int(crime_r_list[int(i["nearest"])][1])})
+    return res
 
 # 매물 수로 난도 가중치를 구함(나온 refined_items의 count가 많은 것 순으로 높은 점수를 매겨서 등수 별로 순차적인 가중치를 정함
 # 예. 매물이 총 50개이면 1위 100점, 2위 98점, 3위 96점 ... 50위 0점)
 
 
-# 최종 Top5 혹은 Top3의 lat, lon 좌표를 구함
-# 이 Top에 포함되는 항목의 구체적인 정보 서술 및 시각화
-# 지도에 마크로 표시해주는 방법도 좋으리라 생각함 + 매물 및 동네의 추가 정보까지 제공
+def cal_T5(refined_residence):
+    sorted_count_list = sorted(
+        refined_residence, key=itemgetter('count'), reverse=True)
 
-print(refined_items)
+    # 최종결과를 담을 리스트 생성
+    res = []
+
+    len_sorted_count_list = len(sorted_count_list)
+
+    # T4최종 가중치 추산을 위한 계산작업
+    for index, i in enumerate(sorted_count_list):
+        res.append({"lgeo": i["lgeo"], "count": i["count"],
+                    "T5_weight": 100*(1/len_sorted_count_list)*(len_sorted_count_list-index)})
+    return res
+
+
+# 모든 매물의 점수에 가중치를 곱하여 환산한 최종 값을 구한다.
+def get_final_weight(T1, T2, T3, T4, T5, w1, w2, w3, w4, w5):
+    # lgeo 별로 lgeo 순으로 정렬,
+    sorted_T1 = sorted(T1, key=itemgetter('lgeo'))
+    sorted_T2 = sorted(T2, key=itemgetter('lgeo'))
+    sorted_T3 = sorted(T3, key=itemgetter('lgeo'))
+    sorted_T4 = sorted(T4, key=itemgetter('lgeo'))
+    sorted_T5 = sorted(T5, key=itemgetter('lgeo'))
+
+    # T1,T2,T3,T4,T5 모두 더함
+    res = []
+    for i in range(0, len(sorted_T1)):
+        res.append({
+            "lgeo": sorted_T1[i]["lgeo"],
+            "T1": sorted_T1[i]["T1_weight"],
+            "T2": sorted_T2[i]["T2_weight"],
+            "T3": sorted_T3[i]["T3_weight"],
+            "T4": sorted_T4[i]["T4_weight"],
+            "T5": sorted_T5[i]["T5_weight"],
+            "total_weight":
+                sorted_T1[i]["T1_weight"]*float(w1)/100 +
+                sorted_T2[i]["T2_weight"]*float(w2)/100 +
+                sorted_T3[i]["T3_weight"]*float(w3)/100 +
+                sorted_T4[i]["T4_weight"]*float(w4)/100 +
+                sorted_T5[i]["T5_weight"]*float(w5)/100,
+            "lat": sorted_T1[i]["lat"],
+            "lon": sorted_T1[i]["lon"],
+        })
+    # total 내림차순으로 sorting함
+    res_sorted = sorted(res, key=itemgetter('total_weight'), reverse=True)
+
+    #
+    return res_sorted
+
+# 이 Top에 포함되는 항목의 구체적인 정보 서술 및 시각화 => 는 아마 프론트에서
+# 지도에 마크로 표시해주는 방법도 좋으리라 생각함 + 매물 및 동네의 추가 정보까지 제공 => 는 아마 프론트에서
+
+
+address_json = find_address(sys.argv[1])
+limit_dist = sys.argv[2]
+w1 = sys.argv[3]
+w2 = sys.argv[4]
+w3 = sys.argv[5]
+w4 = sys.argv[6]
+w5 = sys.argv[7]
+# address_json = find_address("숙명여자대학교")
+# limit_dist = 500
+# w1 = "11.5"
+# w2 = "15.5"
+# w3 = "36.5"
+# w4 = "29"
+# w5 = "7.5"
+
+(univ_lon, univ_lat) = get_address_json(address_json)
+refined_residence = get_residence_address(univ_lon, univ_lat)
+T1 = cal_T1(refined_residence, univ_lon, univ_lat)
+T2 = cal_T2(refined_residence)
+T3 = cal_T3(refined_residence)
+T4 = cal_T4(refined_residence)
+T5 = cal_T5(refined_residence)
+total = get_final_weight(T1, T2, T3, T4, T5, w1, w2, w3, w4, w5)
+
+total = json.dumps(total)
+
+print(total)
+# print(limit_dist)
+# print(weightcode)
+
+# result = json.dumps(total)
+
+# print(len(T1))
+# print(len(T2))
+# print(len(T3))
+# print(len(T4))
+# print(len(T5))
+# for i in T1:
+#     print(i)
+
+# for i in T2:
+#     print(i)
+
+# for i in T3:
+#     print(i)
+
+# for i in T4:
+#     print(i)
+
+# for i in T5:
+#     print(i)
+# print(refined_residence)
