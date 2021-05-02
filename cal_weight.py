@@ -48,14 +48,31 @@ def find_address(univ_name):
 
 
 def get_address_json(address_json):
+    address_lon = 0
+    address_lat = 0
     try:
         address_lon = float(address_json["result"]["place"]["list"][0]["x"])
         address_lat = float(address_json["result"]["place"]["list"][0]["y"])
     except:
-        address_lon = float(
-            address_json["result"]["address"]["jibunsAddress"]["list"][0]["x"])
-        address_lat = float(
-            address_json["result"]["address"]["jibunsAddress"]["list"][0]["y"])
+        pass
+
+    if address_lon == 0:
+        try:
+            address_lon = float(
+                address_json["result"]["address"]["jibunsAddress"]["list"][0]["x"])
+            address_lat = float(
+                address_json["result"]["address"]["jibunsAddress"]["list"][0]["y"])
+        except:
+            pass
+    if address_lon == 0:
+        try:
+            address_lon = float(
+                address_json["result"]["address"]["roadAddress"]["list"][0]["x"])
+            address_lat = float(
+                address_json["result"]["address"]["roadAddress"]["list"][0]["y"])
+        except:
+            pass
+
     return(address_lon,  address_lat)
     # print(address_lat, address_lon)
 
@@ -287,6 +304,18 @@ def get_final_weight(T1, T2, T3, T4, T5, w1, w2, w3, w4, w5):
     #
     return res_sorted
 
+# TOP3 골라서 이 주변 정보들 가져옴
+
+
+def filter_top3(total):
+    # 3개 추려서 위도, 경도 가져옴
+    top3 = []
+    for i in total:
+        top3.append(i)
+    # 그 위도,경도로 주변 근린시설 정보까지 조합하여 반환
+
+    return
+
 # 이 Top에 포함되는 항목의 구체적인 정보 서술 및 시각화 => 는 아마 프론트에서
 # 지도에 마크로 표시해주는 방법도 좋으리라 생각함 + 매물 및 동네의 추가 정보까지 제공 => 는 아마 프론트에서
 
@@ -298,7 +327,7 @@ w2 = sys.argv[4]
 w3 = sys.argv[5]
 w4 = sys.argv[6]
 w5 = sys.argv[7]
-# address_json = find_address("숙명여자대학교")
+# address_json = find_address("중앙대학교 서울캠퍼스")
 # limit_dist = 500
 # w1 = "11.5"
 # w2 = "15.5"
@@ -316,8 +345,8 @@ T5 = cal_T5(refined_residence)
 total = get_final_weight(T1, T2, T3, T4, T5, w1, w2, w3, w4, w5)
 
 total = json.dumps(total)
-
 print(total)
+# print(total)
 # print(limit_dist)
 # print(weightcode)
 
@@ -342,4 +371,5 @@ print(total)
 
 # for i in T5:
 #     print(i)
+# print(total)
 # print(refined_residence)
