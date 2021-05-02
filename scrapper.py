@@ -13,12 +13,12 @@ import sys
 # url = f"https://new.land.naver.com/api/articles/clusters?cortarNo=1141011700&zoom=15&markerId&markerType&selectedComplexNo&selectedComplexBuildingNo&fakeComplexMarker&realEstateType=APT%3AOPST%3AABYG%3AOBYG%3AGM%3AOR%3AVL%3ADDDGG%3AJWJT%3ASGJT%3AHOJT&tradeType=&tag=%3A%3A%3A%3A%3A%3A%3ASMALLSPCRENT%3A&rentPriceMin=0&rentPriceMax=900000000&priceMin=0&priceMax=900000000&areaMin=0&areaMax=900000000&oldBuildYears&recentlyBuildYears&minHouseHoldCount&maxHouseHoldCount&showArticle=false&sameAddressGroup=false&minMaintenanceCost&maxMaintenanceCost&priceType=RETAIL&directions=&leftLon=126.8992045&rightLon=126.9317987&topLat=37.5879848&bottomLat=37.576930950000005"
 
 # 명지대학교 인문캠퍼스 위치가 중심인 지도.
-center_lat = 37.5785302
-center_lon = 126.9234694
-btm_lat = 37.5625943
-left_lon = 126.8822707
-top_lat = 37.5944627
-right_lon = 126.9646681
+# center_lat = 37.5785302
+# center_lon = 126.9234694
+# btm_lat = 37.5625943
+# left_lon = 126.8822707
+# top_lat = 37.5944627
+# right_lon = 126.9646681
 
 
 def scrapper(center_lat,
