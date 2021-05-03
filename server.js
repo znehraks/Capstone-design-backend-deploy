@@ -30,7 +30,9 @@ app.post("/recommendation", (req, res) => {
     // spawn new child process to call the python script
     const python = spawn("python", [
       "cal_weight.py",
-      req.body.Q1Answer,
+      req.body.univ_name,
+      req.body.univ_lat,
+      req.body.univ_lon,
       req.body.Q2Answer,
       req.body.w1,
       req.body.w2,

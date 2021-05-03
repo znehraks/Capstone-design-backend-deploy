@@ -18,64 +18,64 @@ from haversine import haversine
 # 먼저 학교 이름으로 학교의 중심 위도,경도를 알아오기
 
 
-def find_address(univ_name):
-    # 서울소재대학교 주소 csv에서 가져옴
-    univ = open('seoul_universities.csv', 'r')
-    univ_r = csv.reader(univ)
-    # univ_address에 필요한 대학교 주소 데이터 추출
-    univ_address = ""
-    for i in univ_r:
-        if univ_name == i[3]:
-            univ_address = i[8]
-            break
-    univ.close()
-    # print(univ_address)
+# def find_address(univ_name):
+#     # 서울소재대학교 주소 csv에서 가져옴
+#     univ = open('seoul_universities.csv', 'r')
+#     univ_r = csv.reader(univ)
+#     # univ_address에 필요한 대학교 주소 데이터 추출
+#     univ_address = ""
+#     for i in univ_r:
+#         if univ_name == i[3]:
+#             univ_address = i[8]
+#             break
+#     univ.close()
+#     # print(univ_address)
 
-    url = f"https://map.naver.com/v5/api/search?caller=pcweb&query={univ_address}"
+#     url = f"https://map.naver.com/v5/api/search?caller=pcweb&query={univ_address}"
 
-    sys.stdout.reconfigure(encoding='utf-8')
-    chrome_options = Options()
-    chrome_options.add_experimental_option(
-        "excludeSwitches", ["enable-logging"])
-    driver = webdriver.Chrome(
-        executable_path=".\\chromedriver.exe", options=chrome_options)
+#     sys.stdout.reconfigure(encoding='utf-8')
+#     chrome_options = Options()
+#     chrome_options.add_experimental_option(
+#         "excludeSwitches", ["enable-logging"])
+#     driver = webdriver.Chrome(
+#         executable_path=".\\chromedriver.exe", options=chrome_options)
 
-    driver.get(url)
-    html = driver.page_source
-    soup = BeautifulSoup(html, "lxml")
-    address_json = json.loads(soup.find("body").text)
-    driver.close()
-    return address_json
+#     driver.get(url)
+#     html = driver.page_source
+#     soup = BeautifulSoup(html, "lxml")
+#     address_json = json.loads(soup.find("body").text)
+#     driver.close()
+#     return address_json
 
 
-def get_address_json(address_json):
-    address_lon = 0
-    address_lat = 0
-    try:
-        address_lon = float(address_json["result"]["place"]["list"][0]["x"])
-        address_lat = float(address_json["result"]["place"]["list"][0]["y"])
-    except:
-        pass
+# def get_address_json(address_json):
+#     address_lon = 0
+#     address_lat = 0
+#     try:
+#         address_lon = float(address_json["result"]["place"]["list"][0]["x"])
+#         address_lat = float(address_json["result"]["place"]["list"][0]["y"])
+#     except:
+#         pass
 
-    if address_lon == 0:
-        try:
-            address_lon = float(
-                address_json["result"]["address"]["jibunsAddress"]["list"][0]["x"])
-            address_lat = float(
-                address_json["result"]["address"]["jibunsAddress"]["list"][0]["y"])
-        except:
-            pass
-    if address_lon == 0:
-        try:
-            address_lon = float(
-                address_json["result"]["address"]["roadAddress"]["list"][0]["x"])
-            address_lat = float(
-                address_json["result"]["address"]["roadAddress"]["list"][0]["y"])
-        except:
-            pass
+#     if address_lon == 0:
+#         try:
+#             address_lon = float(
+#                 address_json["result"]["address"]["jibunsAddress"]["list"][0]["x"])
+#             address_lat = float(
+#                 address_json["result"]["address"]["jibunsAddress"]["list"][0]["y"])
+#         except:
+#             pass
+#     if address_lon == 0:
+#         try:
+#             address_lon = float(
+#                 address_json["result"]["address"]["roadAddress"]["list"][0]["x"])
+#             address_lat = float(
+#                 address_json["result"]["address"]["roadAddress"]["list"][0]["y"])
+#         except:
+#             pass
 
-    return(address_lon,  address_lat)
-    # print(address_lat, address_lon)
+#     return(address_lon,  address_lat)
+#     # print(address_lat, address_lon)
 
 
 # 알아 온 위도, 경도를 바탕으로 상하좌우,중심 위도경도를 구함
@@ -321,35 +321,44 @@ def get_final_weight(T1, T2, T3, T4, T5, w1, w2, w3, w4, w5):
 # TOP3 골라서 이 주변 정보들 가져옴
 
 
-def filter_top3(total):
-    # 3개 추려서 위도, 경도 가져옴
-    top3 = []
-    for i in total:
-        top3.append(i)
+def filter_top5(total):
+    # 5개 추려서 위도, 경도 가져옴
+    top5 = []
+    for index, i in enumerate(total):
+        if index == 5:
+            break
+        top5.append(i)
     # 그 위도,경도로 주변 근린시설 정보까지 조합하여 반환
 
-    return
+    return top5
 
 # 이 Top에 포함되는 항목의 구체적인 정보 서술 및 시각화 => 는 아마 프론트에서
 # 지도에 마크로 표시해주는 방법도 좋으리라 생각함 + 매물 및 동네의 추가 정보까지 제공 => 는 아마 프론트에서
 
 
-address_json = find_address(sys.argv[1])
-limit_dist = sys.argv[2]
-w1 = sys.argv[3]
-w2 = sys.argv[4]
-w3 = sys.argv[5]
-w4 = sys.argv[6]
-w5 = sys.argv[7]
-# address_json = find_address("중앙대학교 서울캠퍼스")
-# limit_dist = 500
-# w1 = "11.5"
-# w2 = "15.5"
-# w3 = "36.5"
-# w4 = "29"
-# w5 = "7.5"
+# 안씀 address_json = find_address(sys.argv[1])
+# 안씀 (univ_lon, univ_lat) = get_address_json(address_json)
 
-(univ_lon, univ_lat) = get_address_json(address_json)
+univ_name = sys.argv[1]
+univ_lat = float(sys.argv[2])
+univ_lon = float(sys.argv[3])
+limit_dist = float(sys.argv[4])
+w1 = sys.argv[5]
+w2 = sys.argv[6]
+w3 = sys.argv[7]
+w4 = sys.argv[8]
+w5 = sys.argv[9]
+
+# univ_name = "한성대학교"
+# univ_lat = 37.5825084
+# univ_lon = 127.0102929
+# limit_dist = 1795
+# w1 = "25.5"
+# w2 = "30"
+# w3 = "5"
+# w4 = "20"
+# w5 = "19.5"
+
 refined_residence = get_residence_address(univ_lon, univ_lat)
 T1 = cal_T1(refined_residence, univ_lon, univ_lat, limit_dist)
 T2 = cal_T2(T1)
@@ -357,9 +366,10 @@ T3 = cal_T3(T1)
 T4 = cal_T4(T1)
 T5 = cal_T5(T1)
 total = get_final_weight(T1, T2, T3, T4, T5, w1, w2, w3, w4, w5)
+top5 = filter_top5(total)
 
-total = json.dumps(total)
-print(total)
+top5 = json.dumps(top5)
+print(top5)
 # print(limit_dist)
 # print(weightcode)
 
