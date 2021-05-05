@@ -298,11 +298,11 @@ def get_final_weight(T1, T2, T3, T4, T5, w1, w2, w3, w4, w5):
     for i in range(0, len(sorted_T1)):
         res.append({
             "lgeo": sorted_T1[i]["lgeo"],
-            "T1": sorted_T1[i]["T1_weight"],
-            "T2": sorted_T2[i]["T2_weight"],
-            "T3": sorted_T3[i]["T3_weight"],
-            "T4": sorted_T4[i]["T4_weight"],
-            "T5": sorted_T5[i]["T5_weight"],
+            "T1": sorted_T1[i]["T1_weight"]*float(w1)/100,
+            "T2": sorted_T2[i]["T2_weight"]*float(w2)/100,
+            "T3": sorted_T3[i]["T3_weight"]*float(w3)/100,
+            "T4": sorted_T4[i]["T4_weight"]*float(w4)/100,
+            "T5": sorted_T5[i]["T5_weight"]*float(w5)/100,
             "total_weight":
                 sorted_T1[i]["T1_weight"]*float(w1)/100 +
                 sorted_T2[i]["T2_weight"]*float(w2)/100 +
