@@ -144,7 +144,7 @@ def cal_T1(refined_residence, univ_lon, univ_lat, limit_dist):
 def cal_T2(refined_residence):
     # 각각의 매물이 어느 지하철역이랑 가깝고(1개) 얼마나 가까운지 맨하탄거리로 표시
     # 지하철csv 불러옴
-    subway = open('subway_refined.csv', 'r')
+    subway = open('subway_refined.csv', 'r', encoding='euc-kr')
     subway_r = csv.reader(subway)
     subway_r_list = list(subway_r)
     # 중간결과를 담을 subway_list 생성
@@ -187,7 +187,7 @@ def cal_T2(refined_residence):
 # 각 매물이 속한 구별 물가로 가중치 합산함
 def cal_T3(refined_residence):
     # 물가 csv 불러옴
-    price = open('price_refined.csv', 'r')
+    price = open('price_refined.csv', 'r',encoding='euc-kr')
     price_r = csv.reader(price)
     price_r_list = list(price_r)
     # 중간결과 담을 리스트
@@ -228,7 +228,7 @@ def cal_T3(refined_residence):
 
 def cal_T4(refined_residence):
      # 범죄율 csv 불러옴
-    crime = open('crime_refined.csv', 'r')
+    crime = open('crime_refined.csv', 'r',encoding='euc-kr')
     crime_r = csv.reader(crime)
     crime_r_list = list(crime_r)
     # 중간결과 담을 리스트

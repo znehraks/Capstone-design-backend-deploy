@@ -28,8 +28,8 @@ app.post("/recommendation", (req, res) => {
     var data;
     //   var largeDataset = [];
     // spawn new child process to call the python script
-    const python = spawn("python", [
-      "cal_weight.py",
+    const python = spawn("python3", [
+      "./cal_weight.py",
       req.body.univ_name,
       req.body.univ_lat,
       req.body.univ_lon,
