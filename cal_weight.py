@@ -4,11 +4,11 @@ import csv
 import requests
 from bs4 import BeautifulSoup
 import json
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.by import By
+# from selenium import webdriver
+# from selenium.webdriver.chrome.options import Options
+# from selenium.webdriver.support.ui import WebDriverWait
+# from selenium.webdriver.support import expected_conditions as EC
+# from selenium.webdriver.common.by import By
 import time
 import io
 import sys
@@ -328,6 +328,12 @@ def get_final_weight(T1, T2, T3, T4, T5, w1, w2, w3, w4, w5):
             "T4": i["T4"],
             "T5": i["T5"],
             "total_weight": i["total_weight"],
+            "거리": i["T1"],
+            "역세권": i["T2"],
+            "가성비": i["T3"],
+            "안전제일": i["T4"],
+            "매물": i["T5"],
+            "총점": i["total_weight"],
             "lat": i["lat"],
             "lon": i["lon"],
         })
@@ -355,25 +361,25 @@ def filter_top5(total):
 # 안씀 address_json = find_address(sys.argv[1])
 # 안씀 (univ_lon, univ_lat) = get_address_json(address_json)
 
-# univ_name = sys.argv[1]
-# univ_lat = float(sys.argv[2])
-# univ_lon = float(sys.argv[3])
-# limit_dist = float(sys.argv[4])
-# w1 = sys.argv[5]
-# w2 = sys.argv[6]
-# w3 = sys.argv[7]
-# w4 = sys.argv[8]
-# w5 = sys.argv[9]
+univ_name = sys.argv[1]
+univ_lat = float(sys.argv[2])
+univ_lon = float(sys.argv[3])
+limit_dist = float(sys.argv[4])
+w1 = sys.argv[5]
+w2 = sys.argv[6]
+w3 = sys.argv[7]
+w4 = sys.argv[8]
+w5 = sys.argv[9]
 
-univ_name = "한성대학교"
-univ_lat = 37.5825084
-univ_lon = 127.0102929
-limit_dist = 1795
-w1 = "25.5"
-w2 = "30"
-w3 = "5"
-w4 = "20"
-w5 = "19.5"
+# univ_name = "한성대학교"
+# univ_lat = 37.5825084
+# univ_lon = 127.0102929
+# limit_dist = 1795
+# w1 = "25.5"
+# w2 = "30"
+# w3 = "5"
+# w4 = "20"
+# w5 = "19.5"
 
 refined_residence = get_residence_address(univ_lon, univ_lat)
 T1 = cal_T1(refined_residence, univ_lon, univ_lat, limit_dist)

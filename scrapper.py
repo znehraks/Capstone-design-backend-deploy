@@ -2,10 +2,10 @@
 import requests
 from bs4 import BeautifulSoup
 import json
-from selenium import webdriver
-from webdriver_manager.chrome import ChromeDriverManager
-from selenium.webdriver.chrome.options import Options
-from pyvirtualdisplay import Display
+# from selenium import webdriver
+# from webdriver_manager.chrome import ChromeDriverManager
+# from selenium.webdriver.chrome.options import Options
+# from pyvirtualdisplay import Display
 import sys
 import time
 # pc버전 api
