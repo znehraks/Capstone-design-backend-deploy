@@ -1,20 +1,13 @@
-from scrapper import scrapper
 import json
 import csv
+from scrapper import dabang_scrapper
 import requests
 from bs4 import BeautifulSoup
 import json
-# from selenium import webdriver
-# from selenium.webdriver.chrome.options import Options
-# from selenium.webdriver.support.ui import WebDriverWait
-# from selenium.webdriver.support import expected_conditions as EC
-# from selenium.webdriver.common.by import By
-import time
-import io
 import sys
 from operator import itemgetter
 from haversine import haversine
-
+import math
 # 먼저 학교 이름으로 학교의 중심 위도,경도를 알아오기
 
 
@@ -79,25 +72,24 @@ from haversine import haversine
 
 
 # 알아 온 위도, 경도를 바탕으로 상하좌우,중심 위도경도를 구함
-def get_residence_address(address_lon, address_lat):
-    center_lat = address_lat
-    center_lon = address_lon
-    btm_lat = address_lat - 0.0159
+def get_residence_address(address_lat, address_lon):
     left_lon = address_lon - 0.0412
-    top_lat = address_lat + 0.0159
+    btm_lat = address_lat - 0.0159
     right_lon = address_lon + 0.0412
+    top_lat = address_lat + 0.0159
 
-    site_json = scrapper(center_lat, center_lon, btm_lat,
-                         left_lon, top_lat, right_lon)
-
-    items = site_json["data"]["ARTICLE"]
+    site_json = dabang_scrapper(left_lon,
+                                btm_lat,
+                                right_lon,
+                                top_lat)
+    items = site_json["regions"]
     refined_items = []
     for i in items:
         refined_items.append({
-            "lgeo": i["lgeo"],
+            "code": i["code"],
             "count": i["count"],
-            "lat": i["lat"],
-            "lon": i["lon"]
+            "lat": i["center"][1],
+            "lon": i["center"][0]
         })
     return refined_items
 # 나온 매물 리스트들 좌표로 각각의 lgeo를 인덱스로 하여
@@ -111,10 +103,9 @@ def cal_T1(refined_residence, univ_lon, univ_lat, limit_dist):
     loc = []
     # abs(i["lat"]-univ_lat)+abs(i["lon"]-univ_lon)
     for i in refined_residence:
-        loc.append({"lgeo": i["lgeo"], "dist": haversine(
+        loc.append({"code": i["code"], "dist": haversine(
             (i["lat"], i["lon"]), (univ_lat, univ_lon), unit='m'), "lat": i["lat"], "lon": i["lon"],
             "count": i["count"]})
-
     # 가까운 순으로 정렬
     sorted_loc = sorted(
         loc, key=itemgetter('dist'))
@@ -133,7 +124,7 @@ def cal_T1(refined_residence, univ_lon, univ_lat, limit_dist):
     len_sorted_loc_filtered = len(sorted_loc_filtered)
     # print(len_sorted_taxicab_geom)
     for index, i in enumerate(sorted_loc_filtered):
-        res.append({"lgeo": i["lgeo"],
+        res.append({"code": i["code"],
                     "count": i["count"], "dist": i["dist"], "lat": i["lat"], "lon": i["lon"],
                     "T1_weight": 100*(1/len_sorted_loc_filtered)*(len_sorted_loc_filtered-index)})
     return res
@@ -161,7 +152,7 @@ def cal_T2(refined_residence):
             temp.append(abs(i["lat"] - float(j[7])) +
                         abs(i["lon"] - float(j[8])))
             if(index_s == len(subway_r_list)-1):
-                subway_list.append({"lgeo": i["lgeo"], "nearest": temp.index(
+                subway_list.append({"code": i["code"], "nearest": temp.index(
                     min(temp))+1, "subway_dist": min(temp)})
 
     subway.close()
@@ -176,7 +167,7 @@ def cal_T2(refined_residence):
 
     # T2최종 가중치 추산을 위한 계산작업
     for index, i in enumerate(sorted_subway_list):
-        res.append({"lgeo": i["lgeo"], "nearest": i["nearest"], "subway_dist": i["subway_dist"],
+        res.append({"code": i["code"], "nearest": i["nearest"], "subway_dist": i["subway_dist"],
                     "T2_weight": 100*(1/len_sorted_subway_list)*(len_sorted_subway_list-index)})
     return res
 
@@ -187,7 +178,7 @@ def cal_T2(refined_residence):
 # 각 매물이 속한 구별 물가로 가중치 합산함
 def cal_T3(refined_residence):
     # 물가 csv 불러옴
-    price = open('price_refined.csv', 'r',encoding='euc-kr')
+    price = open('price_refined.csv', 'r', encoding='euc-kr')
     price_r = csv.reader(price)
     price_r_list = list(price_r)
     # 중간결과 담을 리스트
@@ -204,7 +195,7 @@ def cal_T3(refined_residence):
             temp.append(abs(i["lat"] - float(j[5])) +
                         abs(i["lon"] - float(j[6])))
             if(index_p == len(price_r_list)-1):
-                price_list.append({"lgeo": i["lgeo"], "nearest": temp.index(
+                price_list.append({"code": i["code"], "nearest": temp.index(
                     min(temp))+1, "gu_dist": min(temp)})
 
     price.close()
@@ -219,7 +210,7 @@ def cal_T3(refined_residence):
 
     # T3최종 가중치 추산을 위한 계산작업
     for index, i in enumerate(sorted_price_list):
-        res.append({"lgeo": i["lgeo"], "nearest": i["nearest"], "gu_dist": i["gu_dist"],
+        res.append({"code": i["code"], "nearest": i["nearest"], "gu_dist": i["gu_dist"],
                     "T3_weight": int(price_r_list[int(i["nearest"])][4])})
     return res
 
@@ -228,7 +219,7 @@ def cal_T3(refined_residence):
 
 def cal_T4(refined_residence):
      # 범죄율 csv 불러옴
-    crime = open('crime_refined.csv', 'r',encoding='euc-kr')
+    crime = open('crime_refined.csv', 'r', encoding='euc-kr')
     crime_r = csv.reader(crime)
     crime_r_list = list(crime_r)
     # 중간결과 담을 리스트
@@ -245,7 +236,7 @@ def cal_T4(refined_residence):
             temp.append(abs(i["lat"] - float(j[3])) +
                         abs(i["lon"] - float(j[4])))
             if(index_c == len(crime_r_list)-1):
-                crime_list.append({"lgeo": i["lgeo"], "nearest": temp.index(
+                crime_list.append({"code": i["code"], "nearest": temp.index(
                     min(temp))+1, "gu_dist": min(temp)})
 
     crime.close()
@@ -260,7 +251,7 @@ def cal_T4(refined_residence):
 
     # T4최종 가중치 추산을 위한 계산작업
     for index, i in enumerate(sorted_crime_list):
-        res.append({"lgeo": i["lgeo"], "nearest": i["nearest"], "gu_dist": i["gu_dist"],
+        res.append({"code": i["code"], "nearest": i["nearest"], "gu_dist": i["gu_dist"],
                     "T4_weight": int(crime_r_list[int(i["nearest"])][1])})
     return res
 
@@ -279,7 +270,7 @@ def cal_T5(refined_residence):
 
     # T4최종 가중치 추산을 위한 계산작업
     for index, i in enumerate(sorted_count_list):
-        res.append({"lgeo": i["lgeo"], "count": i["count"],
+        res.append({"code": i["code"], "count": i["count"],
                     "T5_weight": 100*(1/len_sorted_count_list)*(len_sorted_count_list-index)})
     return res
 
@@ -287,18 +278,17 @@ def cal_T5(refined_residence):
 # 모든 매물의 점수에 가중치를 곱하여 환산한 최종 값을 구한다.
 def get_final_weight(T1, T2, T3, T4, T5, w1, w2, w3, w4, w5):
     # lgeo 별로 lgeo 순으로 정렬,
-    sorted_T1 = sorted(T1, key=itemgetter('lgeo'))
-    sorted_T2 = sorted(T2, key=itemgetter('lgeo'))
-    sorted_T3 = sorted(T3, key=itemgetter('lgeo'))
-    sorted_T4 = sorted(T4, key=itemgetter('lgeo'))
-    sorted_T5 = sorted(T5, key=itemgetter('lgeo'))
+    sorted_T1 = sorted(T1, key=itemgetter('code'))
+    sorted_T2 = sorted(T2, key=itemgetter('code'))
+    sorted_T3 = sorted(T3, key=itemgetter('code'))
+    sorted_T4 = sorted(T4, key=itemgetter('code'))
+    sorted_T5 = sorted(T5, key=itemgetter('code'))
 
     # T1,T2,T3,T4,T5 모두 더함
     res = []
     for i in range(0, len(sorted_T1)):
         res.append({
-            "lgeo": sorted_T1[i]["lgeo"],
-            "lgeo": sorted_T1[i]["lgeo"],
+            "code": sorted_T1[i]["code"],
             "T1": round(sorted_T1[i]["T1_weight"]*float(w1)/100),
             "T2": round(sorted_T2[i]["T2_weight"]*float(w2)/100),
             "T3": round(sorted_T3[i]["T3_weight"]*float(w3)/100),
@@ -311,17 +301,22 @@ def get_final_weight(T1, T2, T3, T4, T5, w1, w2, w3, w4, w5):
                                   sorted_T5[i]["T5_weight"]*float(w5)/100),
             "lat": sorted_T1[i]["lat"],
             "lon": sorted_T1[i]["lon"],
-            "lat": sorted_T1[i]["lat"],
-            "lon": sorted_T1[i]["lon"],
         })
     # total 내림차순으로 sorting함
-    res_sorted = sorted(res, key=itemgetter('total_weight'), reverse=True)
+    avgs = [sum(i["T1"] for i in res)/len(res),
+            sum(i["T2"]
+                for i in res)/len(res),
+            sum(i["T3"]
+                for i in res)/len(res),
+            sum(i["T4"]
+                for i in res)/len(res),
+            sum(i["T5"] for i in res)/len(res), ]
     res_2 = []
     res_sorted = sorted(res, key=itemgetter('total_weight'), reverse=True)
     for index, i in enumerate(res_sorted):
         res_2.append({
             "rank": index+1,
-            "lgeo": i["lgeo"],
+            "code": i["code"],
             "T1": i["T1"],
             "T2": i["T2"],
             "T3": i["T3"],
@@ -331,13 +326,25 @@ def get_final_weight(T1, T2, T3, T4, T5, w1, w2, w3, w4, w5):
             "거리": i["T1"],
             "역세권": i["T2"],
             "가성비": i["T3"],
-            "안전제일": i["T4"],
+            "안전": i["T4"],
             "매물": i["T5"],
             "총점": i["total_weight"],
             "lat": i["lat"],
             "lon": i["lon"],
+            "T1_avg": avgs[0],
+            "T2_avg": avgs[1],
+            "T3_avg": avgs[2],
+            "T4_avg": avgs[3],
+            "T5_avg": avgs[4],
+            "total_weight_avg": (avgs[0]+avgs[1]+avgs[2]+avgs[3]+avgs[4])/5,
+            "평균 거리": avgs[0],
+            "평균 역세권": avgs[1],
+            "평균 가성비": avgs[2],
+            "평균 안전": avgs[3],
+            "평균 매물": avgs[4],
+            "평균 총점": (avgs[0]+avgs[1]+avgs[2]+avgs[3]+avgs[4])/5
         })
-    #
+
     return res_2
 
 # TOP3 골라서 이 주변 정보들 가져옴
@@ -358,22 +365,25 @@ def filter_top5(total):
 # 지도에 마크로 표시해주는 방법도 좋으리라 생각함 + 매물 및 동네의 추가 정보까지 제공 => 는 아마 프론트에서
 
 
+##################################################
+# 얻어온 매물리스트에서 다방에서 한 번더 request를 보낸뒤 해당 매물 동그라미에서 가장 가까운 매물정보를 여러개 얻어옴
+###################################################
+
+
 # 안씀 address_json = find_address(sys.argv[1])
 # 안씀 (univ_lon, univ_lat) = get_address_json(address_json)
-
 univ_name = sys.argv[1]
-univ_lat = float(sys.argv[2])
-univ_lon = float(sys.argv[3])
+univ_lon = float(sys.argv[2])
+univ_lat = float(sys.argv[3])
 limit_dist = float(sys.argv[4])
 w1 = sys.argv[5]
 w2 = sys.argv[6]
 w3 = sys.argv[7]
 w4 = sys.argv[8]
 w5 = sys.argv[9]
-
 # univ_name = "한성대학교"
-# univ_lat = 37.5825084
 # univ_lon = 127.0102929
+# univ_lat = 37.5825084
 # limit_dist = 1795
 # w1 = "25.5"
 # w2 = "30"
@@ -381,8 +391,9 @@ w5 = sys.argv[9]
 # w4 = "20"
 # w5 = "19.5"
 
-refined_residence = get_residence_address(univ_lon, univ_lat)
+refined_residence = get_residence_address(univ_lat, univ_lon)
 T1 = cal_T1(refined_residence, univ_lon, univ_lat, limit_dist)
+
 T2 = cal_T2(T1)
 T3 = cal_T3(T1)
 T4 = cal_T4(T1)

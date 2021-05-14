@@ -31,8 +31,8 @@ app.post("/recommendation", (req, res) => {
     const python = spawn("python3", [
       "./cal_weight.py",
       req.body.univ_name,
-      req.body.univ_lat,
       req.body.univ_lon,
+      req.body.univ_lat,
       req.body.Q2Answer,
       req.body.w1,
       req.body.w2,
