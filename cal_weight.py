@@ -276,7 +276,7 @@ def cal_T5(refined_residence):
 
 
 # 모든 매물의 점수에 가중치를 곱하여 환산한 최종 값을 구한다.
-def get_final_weight(T1, T2, T3, T4, T5, w1, w2, w3, w4, w5):
+def get_final_weight(T1, T2, T3, T4, T5, w1, w2, w3, w4, w5, first_weight, second_weight, third_weight):
     # lgeo 별로 lgeo 순으로 정렬,
     sorted_T1 = sorted(T1, key=itemgetter('code'))
     sorted_T2 = sorted(T2, key=itemgetter('code'))
@@ -313,37 +313,42 @@ def get_final_weight(T1, T2, T3, T4, T5, w1, w2, w3, w4, w5):
             sum(i["T5"] for i in res)/len(res), ]
     res_2 = []
     res_sorted = sorted(res, key=itemgetter('total_weight'), reverse=True)
+    rank = 0
     for index, i in enumerate(res_sorted):
-        res_2.append({
-            "rank": index+1,
-            "code": i["code"],
-            "T1": i["T1"],
-            "T2": i["T2"],
-            "T3": i["T3"],
-            "T4": i["T4"],
-            "T5": i["T5"],
-            "total_weight": i["total_weight"],
-            "거리": i["T1"],
-            "역세권": i["T2"],
-            "가성비": i["T3"],
-            "안전": i["T4"],
-            "매물": i["T5"],
-            "총점": i["total_weight"],
-            "lat": i["lat"],
-            "lon": i["lon"],
-            "T1_avg": avgs[0],
-            "T2_avg": avgs[1],
-            "T3_avg": avgs[2],
-            "T4_avg": avgs[3],
-            "T5_avg": avgs[4],
-            "total_weight_avg": (avgs[0]+avgs[1]+avgs[2]+avgs[3]+avgs[4])/5,
-            "평균 거리": avgs[0],
-            "평균 역세권": avgs[1],
-            "평균 가성비": avgs[2],
-            "평균 안전": avgs[3],
-            "평균 매물": avgs[4],
-            "평균 총점": (avgs[0]+avgs[1]+avgs[2]+avgs[3]+avgs[4])/5
-        })
+        if(i[first_weight] >= avgs[int(str(first_weight).split("T")[1])-1] or i[second_weight] >= avgs[int(str(second_weight).split("T")[1])-1] or i[third_weight] >= avgs[int(str(third_weight).split("T")[1])-1]):
+            rank += 1
+            res_2.append({
+                "rank": rank,
+                "code": i["code"],
+                "T1": i["T1"],
+                "T2": i["T2"],
+                "T3": i["T3"],
+                "T4": i["T4"],
+                "T5": i["T5"],
+                "total_weight": i["total_weight"],
+                "거리": i["T1"],
+                "역세권": i["T2"],
+                "가성비": i["T3"],
+                "안전": i["T4"],
+                "매물": i["T5"],
+                "총점": i["total_weight"],
+                "lat": i["lat"],
+                "lon": i["lon"],
+                "T1_avg": avgs[0],
+                "T2_avg": avgs[1],
+                "T3_avg": avgs[2],
+                "T4_avg": avgs[3],
+                "T5_avg": avgs[4],
+                "total_weight_avg": (avgs[0]+avgs[1]+avgs[2]+avgs[3]+avgs[4])/5,
+                "평균 거리": avgs[0],
+                "평균 역세권": avgs[1],
+                "평균 가성비": avgs[2],
+                "평균 안전": avgs[3],
+                "평균 매물": avgs[4],
+                "평균 총점": (avgs[0]+avgs[1]+avgs[2]+avgs[3]+avgs[4])/5
+            })
+        else:
+            continue
 
     return res_2
 
@@ -376,15 +381,21 @@ univ_name = sys.argv[1]
 univ_lon = float(sys.argv[2])
 univ_lat = float(sys.argv[3])
 limit_dist = float(sys.argv[4])
-w1 = sys.argv[5]
-w2 = sys.argv[6]
-w3 = sys.argv[7]
-w4 = sys.argv[8]
-w5 = sys.argv[9]
+first_weight = sys.argv[5]
+second_weight = sys.argv[6]
+third_weight = sys.argv[7]
+w1 = sys.argv[8]
+w2 = sys.argv[9]
+w3 = sys.argv[10]
+w4 = sys.argv[11]
+w5 = sys.argv[12]
 # univ_name = "한성대학교"
 # univ_lon = 127.0102929
 # univ_lat = 37.5825084
 # limit_dist = 1795
+# first_weight = "T1"
+# second_weight = "T2"
+# third_weight = "T3"
 # w1 = "25.5"
 # w2 = "30"
 # w3 = "5"
@@ -398,7 +409,8 @@ T2 = cal_T2(T1)
 T3 = cal_T3(T1)
 T4 = cal_T4(T1)
 T5 = cal_T5(T1)
-total = get_final_weight(T1, T2, T3, T4, T5, w1, w2, w3, w4, w5)
+total = get_final_weight(T1, T2, T3, T4, T5, w1, w2, w3, w4, w5, 
+                         first_weight, second_weight, third_weight)
 top5 = filter_top5(total)
 
 top5 = json.dumps(top5)
