@@ -84,6 +84,55 @@ def dabang_scrapper(btm_lat,
     return site_json
 
 
+def dabang_item_scrapper(code, page):
+    url = f"https://m.dabangapp.com/api/3/room/list/multi-room/region?api_version=3.0.1&call_type=web&code={code}&filters=%7B%22multi_room_type%22%3A%5B0%2C1%2C2%5D%2C%22selling_type%22%3A%5B0%2C1%2C2%5D%2C%22deposit_range%22%3A%5B0%2C999999%5D%2C%22price_range%22%3A%5B0%2C999999%5D%2C%22trade_range%22%3A%5B0%2C999999%5D%2C%22maintenance_cost_range%22%3A%5B0%2C999999%5D%2C%22room_size%22%3A%5B0%2C999999%5D%2C%22supply_space_range%22%3A%5B0%2C999999%5D%2C%22room_floor_multi%22%3A%5B1%2C2%2C3%2C4%2C5%2C6%2C7%2C-1%2C0%5D%2C%22division%22%3Afalse%2C%22duplex%22%3Afalse%2C%22room_type%22%3A%5B1%2C2%5D%2C%22use_approval_date_range%22%3A%5B0%2C999999%5D%2C%22parking_average_range%22%3A%5B0%2C999999%5D%2C%22household_num_range%22%3A%5B0%2C999999%5D%2C%22parking%22%3Afalse%2C%22animal%22%3Afalse%2C%22short_lease%22%3Afalse%2C%22full_option%22%3Afalse%2C%22built_in%22%3Afalse%2C%22elevator%22%3Afalse%2C%22balcony%22%3Afalse%2C%22loan%22%3Afalse%2C%22safety%22%3Afalse%2C%22pano%22%3Afalse%2C%22deal_type%22%3A%5B0%2C1%5D%7D&page={page}&version=1&zoom=15"
+
+    header = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36',
+              'Referer': 'https://m.dabangapp.com/'}
+    res = requests.get(url, headers=header)
+    site_json = json.loads(res.text)
+    rooms = site_json["rooms"]
+    # for  i in site_json:
+    # type_str
+    # location
+    # hash_tags
+    # desc
+    # desc2
+    # img_url_01
+    # img_url_02
+    # img_url_03
+    # img_url_04
+    # price_title
+    # selling_type_str
+    rooms_id = []
+    rooms_type = []
+    rooms_lat = []
+    rooms_lon = []
+    rooms_price_title = []
+    rooms_selling_type = []
+    rooms_img_url_01 = []
+    rooms_desc = []
+    rooms_desc2 = []
+    rooms_hash_tags = []
+    rooms_hash_tags_count = []
+    for i in rooms:
+        rooms_id.append(i["id"])
+        rooms_type.append(i["room_type"])
+        rooms_lat.append(float(i["location"][1]))
+        rooms_lon.append(float(i["location"][0]))
+        rooms_price_title.append(i["price_title"])
+        rooms_selling_type.append(i["selling_type"])
+        rooms_img_url_01.append(i["img_url"])
+        rooms_desc.append(i["room_desc"])
+        rooms_desc2.append(i["room_desc2"])
+
+        hash_tags_count = len(i["hash_tags"])
+        rooms_hash_tags_count.append(hash_tags_count)
+        for index, j in enumerate(i["hash_tags"]):
+            rooms_hash_tags.append(j)
+
+    return rooms_id, rooms_type, rooms_lat, rooms_lon, rooms_price_title, rooms_selling_type, rooms_img_url_01, rooms_desc, rooms_desc2, rooms_hash_tags_count, rooms_hash_tags
+
 # btm_lat = 126.9439038 - 0.0159
 # left_lon = 37.5853994 - 0.0412
 # top_lat = 126.9439038 + 0.0159

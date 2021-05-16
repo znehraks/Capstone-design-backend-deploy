@@ -1,6 +1,6 @@
 import json
 import csv
-from scrapper import dabang_scrapper
+from scrapper import dabang_item_scrapper, dabang_scrapper
 import requests
 from bs4 import BeautifulSoup
 import json
@@ -345,7 +345,18 @@ def get_final_weight(T1, T2, T3, T4, T5, w1, w2, w3, w4, w5, first_weight, secon
                 "평균 가성비": avgs[2],
                 "평균 안전": avgs[3],
                 "평균 매물": avgs[4],
-                "평균 총점": (avgs[0]+avgs[1]+avgs[2]+avgs[3]+avgs[4])/5
+                "평균 총점": (avgs[0]+avgs[1]+avgs[2]+avgs[3]+avgs[4])/5,
+                "rooms_id": [],
+                "rooms_type": [],
+                "rooms_location_lat": [],
+                "rooms_location_lon": [],
+                "rooms_hash_tags_count": [],
+                "rooms_hash_tags": [],
+                "rooms_desc": [],
+                "rooms_desc2": [],
+                "rooms_img_url_01": [],
+                "rooms_price_title": [],
+                "rooms_selling_type": [],
             })
         else:
             continue
@@ -366,6 +377,23 @@ def filter_top5(total):
 
     return top5
 
+def find_rooms(top5):
+    for i in top5:
+        (rooms_id, rooms_type, rooms_lat,
+         rooms_lon, rooms_price_title, rooms_selling_type, rooms_img_url_01, rooms_desc, rooms_desc2, rooms_hash_tags_count, rooms_hash_tags) = dabang_item_scrapper(
+            i["code"], 1)
+        i["rooms_id"] = rooms_id
+        i["rooms_type"] = rooms_type
+        i["rooms_location_lat"] = rooms_lat
+        i["rooms_location_lon"] = rooms_lon
+        i["rooms_price_title"] = rooms_price_title
+        i["rooms_selling_type"] = rooms_selling_type
+        i["rooms_img_url_01"] = rooms_img_url_01
+        i["rooms_desc"] = rooms_desc
+        i["rooms_desc2"] = rooms_desc2
+        i["rooms_hash_tags_count"] = rooms_hash_tags_count
+        i["rooms_hash_tags"] = rooms_hash_tags
+    return top5
 # 이 Top에 포함되는 항목의 구체적인 정보 서술 및 시각화 => 는 아마 프론트에서
 # 지도에 마크로 표시해주는 방법도 좋으리라 생각함 + 매물 및 동네의 추가 정보까지 제공 => 는 아마 프론트에서
 
@@ -389,34 +417,34 @@ w2 = sys.argv[9]
 w3 = sys.argv[10]
 w4 = sys.argv[11]
 w5 = sys.argv[12]
-# univ_name = "한성대학교"
-# univ_lon = 127.0102929
-# univ_lat = 37.5825084
-# limit_dist = 1795
+# univ_name = "숙명여자대학교"
+# univ_lon = 126.9645778
+# univ_lat = 37.5459469
+# limit_dist = 846
 # first_weight = "T1"
 # second_weight = "T2"
 # third_weight = "T3"
-# w1 = "25.5"
-# w2 = "30"
-# w3 = "5"
+# w1 = "30.5"
+# w2 = "21"
+# w3 = "17"
 # w4 = "20"
-# w5 = "19.5"
+# w5 = "11.5"
 
 refined_residence = get_residence_address(univ_lat, univ_lon)
 T1 = cal_T1(refined_residence, univ_lon, univ_lat, limit_dist)
-
 T2 = cal_T2(T1)
 T3 = cal_T3(T1)
 T4 = cal_T4(T1)
 T5 = cal_T5(T1)
-total = get_final_weight(T1, T2, T3, T4, T5, w1, w2, w3, w4, w5, 
-                         first_weight, second_weight, third_weight)
+total = get_final_weight(T1, T2, T3, T4, T5, w1, w2, w3, w4, w5, first_weight, second_weight, third_weight)
 top5 = filter_top5(total)
+top5_with_rooms = find_rooms(top5)
+# print(top5_with_rooms)
+top5_with_rooms = json.dumps(top5_with_rooms)
+print(top5_with_rooms)
 
-top5 = json.dumps(top5)
-print(top5)
-# print(limit_dist)
-# print(weightcode)
+
+
 
 # result = json.dumps(total)
 

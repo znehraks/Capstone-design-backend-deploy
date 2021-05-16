@@ -48,7 +48,7 @@ app.post("/recommendation", (req, res) => {
       // console.log("Pipe data from python script ...");
       // largeDataset.push(data);
 
-      data = chunk.toString("utf-8");
+      data = chunk.toString("utf8");
       data = data.replaceAll("'", '"');
       data = data.replaceAll("None", '"None"');
     });
@@ -57,8 +57,8 @@ app.post("/recommendation", (req, res) => {
     python.on("close", (code) => {
       console.log(`child process close all stdio with code ${code}`);
       // send data to browser
-      const obj = JSON.parse(data);
-      res.json(obj);
+      // const obj = JSON.parse(data);
+      res.json(data);
     });
   } catch (e) {}
 });
