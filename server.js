@@ -55,12 +55,12 @@ app.post("/recommendation", (req, res) => {
       // largeDataset.push(data);
 
       data = chunk.toString("utf-8");
-      res.json(data);
     });
 
     // in close event we are sure that stream from child process is closed
     python.on("close", (code) => {
       console.log(`child process close all stdio with code ${code}`);
+      res.json(data);
     });
   } catch (e) {}
 });
