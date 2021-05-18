@@ -310,12 +310,13 @@ def get_final_weight(T1, T2, T3, T4, T5, w1, w2, w3, w4, w5, first_weight, secon
                 for i in res)/len(res),
             sum(i["T4"]
                 for i in res)/len(res),
-            sum(i["T5"] for i in res)/len(res), ]
+            sum(i["T5"] for i in res)/len(res),
+            sum(i["total_weight"] for i in res)/len(res), ]
     res_2 = []
     res_sorted = sorted(res, key=itemgetter('total_weight'), reverse=True)
     rank = 0
     for index, i in enumerate(res_sorted):
-        if(i[first_weight] >= avgs[int(str(first_weight).split("T")[1])-1] or i[second_weight] >= avgs[int(str(second_weight).split("T")[1])-1] or i[third_weight] >= avgs[int(str(third_weight).split("T")[1])-1]):
+        if(i[first_weight] >= avgs[int(str(first_weight).split("T")[1])-1] or i[second_weight] >= avgs[int(str(second_weight).split("T")[1])-1] or i[third_weight] >= avgs[int(str(third_weight).split("T")[1])-1] or i["total_weight"] >= avgs[5]):
             rank += 1
             res_2.append({
                 "rank": rank,
@@ -380,8 +381,7 @@ def filter_top5(total):
 def find_rooms(top5):
     for i in top5:
         (rooms_id, rooms_type, rooms_lat,
-         rooms_lon, rooms_price_title, rooms_selling_type, rooms_img_url_01, rooms_desc, rooms_desc2, rooms_hash_tags_count, rooms_hash_tags) = dabang_item_scrapper(
-            i["code"], 1)
+         rooms_lon, rooms_price_title, rooms_selling_type, rooms_img_url_01, rooms_desc, rooms_desc2, rooms_hash_tags_count, rooms_hash_tags) = dabang_item_scrapper(i["code"], 1)
         i["rooms_id"] = rooms_id
         i["rooms_type"] = rooms_type
         i["rooms_location_lat"] = rooms_lat
@@ -437,12 +437,12 @@ T3 = cal_T3(T1)
 T4 = cal_T4(T1)
 T5 = cal_T5(T1)
 total = get_final_weight(T1, T2, T3, T4, T5, w1, w2, w3, w4, w5, first_weight, second_weight, third_weight)
+
 top5 = filter_top5(total)
 top5_with_rooms = find_rooms(top5)
 # print(top5_with_rooms)
 top5_with_rooms = json.dumps(top5_with_rooms)
 print(top5_with_rooms)
-
 
 
 
