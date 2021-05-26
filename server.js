@@ -96,6 +96,18 @@ app.post("/add_diy", (req, res) => {
   });
 });
 
+//설문조사 저장 라우터
+app.post("/add_eval", (req, res) => {
+  let sql = `INSERT INTO evaluation(evaluation_category_no, univ_name, T_set, rank01_score, rank02_score, rank03_score, rank04_score, rank05_score) values (${req.body.evaluation_category_no}, '${req.body.univ_name}', '${req.body.T_set}', ${req.body.rank01_score}, ${req.body.rank02_score}, ${req.body.rank03_score}, ${req.body.rank04_score}, ${req.body.rank05_score})`;
+
+  connection.query(sql, (err, rows, fields) => {
+    res.send(rows);
+    console.log(err);
+  });
+});
+//회원가입라우터
+
+//로그인라우터
 app.listen(port, () =>
   console.log(`Example app listening on port 
 ${port}!`)
