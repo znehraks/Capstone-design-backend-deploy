@@ -3,15 +3,17 @@ const bodyParser = require("body-parser");
 const { spawn } = require("child_process");
 const cors = require('cors');
 const app = express();
-const port = 3002;
+const port = 5000;
 const connection = require("./connection");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-// const fs = require("fs");
-// const data = fs.readFileSync("./email.json");
-// const conf = JSON.parse(data);
-// const nodemailer = require('nodemailer');
-
+const nodemailer = require("nodemailer");
+const fs = require("fs");
+const data = fs.readFileSync("./email.json");
+const conf = JSON.parse(data);
+const ejs = require("ejs");
+const path = require("path");
+var appDir = path.dirname(require.main.filename);
 //크롤링 및 분석 후에 최종 res.send로 프론트에 전달해야 함.
 //json parsing하는데에 변수가 많음.
 
