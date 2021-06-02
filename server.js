@@ -5,6 +5,12 @@ const cors = require('cors');
 const app = express();
 const port = 3002;
 const connection = require("./connection");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+// const fs = require("fs");
+// const data = fs.readFileSync("./email.json");
+// const conf = JSON.parse(data);
+// const nodemailer = require('nodemailer');
 
 //크롤링 및 분석 후에 최종 res.send로 프론트에 전달해야 함.
 //json parsing하는데에 변수가 많음.
@@ -105,9 +111,118 @@ app.post("/add_eval", (req, res) => {
     console.log(err);
   });
 });
+
+app.get("/student_recommendation/:univ_name", (req, res) => {
+  let sql = `SELECT Q1, Q2, Q3, Q4, Q5, univ_lon, univ_lat, w1, w2 ,w3 ,w4, w5, T_set  FROM diy_reco_history GROUP BY T_set HAVING Q1 LIKE '%${req.params.univ_name}%'  ORDER BY COUNT(T_set) DESC LIMIT 1`;
+
+  connection.query(sql, (err, rows, fields) => {
+    res.send(rows);
+    console.log(err);
+  });
+});
+
 //회원가입라우터
 
-//로그인라우터
+app.post("/signup", (req, res) => {
+  bcrypt.genSalt(10, (err, salt) => {
+    bcrypt.hash(req.body.user_pwd, salt, (err, hash) => {
+      let sql = `INSERT INTO user (user_id, user_pwd, user_email, auth) values('${req.body.user_id}','${hash}', '${req.body.user_email}', '${req.body.authNum}')`;
+      connection.query(sql, (err, rows, fields) => {
+        //중복검사
+        if (err && err.errno === 1062) {
+          return res.json({ signupSuccess: false });
+        }
+        return res.json({ signupSuccess: true });
+      });
+    });
+  });
+});
+
+app.post("/signin", (req, res) => {
+  let sql = "SELECT * FROM user WHERE user_id = ? and is_validated = 1";
+  connection.query(sql, req.body.user_id, (err, user, fields) => {
+    if (err) return res.json(err);
+    if (user.length === 0)
+      return res.json({
+        loginSuccess: false,
+        message:
+          "ID에 해당하는 유저가 없거나 인증이 완료되지 않은 아이디입니다.",
+      });
+    const isSame = bcrypt.compareSync(req.body.user_pwd, user[0].user_pwd);
+    if (isSame) {
+      // 로그인 성공 토큰 생성 추후 config로 암호화 필요
+      let token = jwt.sign(user[0].user_id, "secretToken");
+      res.cookie("user", token).status(200).json({
+        loginSuccess: true,
+        userId: user[0].user_id,
+      });
+    } else {
+      return res.json({
+        loginSuccess: false,
+        message: "비밀번호가 틀렸습니다",
+      });
+    }
+  });
+});
+
+//이메일 전송 api
+app.post("/sendEmail", async (req, res) => {
+  let authNum = req.body.authNum;
+  let emailTemplete;
+  ejs.renderFile(
+    appDir + "/template/authMail.ejs",
+    { authCode: authNum },
+    function (err, data) {
+      if (err) {
+        console.log(err);
+      }
+      emailTemplete = data;
+    }
+  );
+
+  let transporter = nodemailer.createTransport({
+    service: "gmail",
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false,
+    auth: {
+      user: conf.emailId,
+      pass: conf.emailPwd,
+    },
+  });
+
+  let mailOptions = await transporter.sendMail({
+    from: `저기어때.`,
+    to: req.body.user_email,
+    subject: "저기어때. 회원가입을 위한 인증번호를 입력해주세요.",
+    html: emailTemplete,
+  });
+
+  transporter.sendMail(mailOptions, function (error, info) {
+    if (error) {
+      console.log(error);
+    }
+    console.log("Finish sending email : " + info.response);
+    res.send(authNum);
+    transporter.close();
+  });
+});
+
+//이메일 인증번호 인증 api
+app.post("/validate", (req, res) => {
+  let sql = `UPDATE user SET is_validated = 1, auth = "" WHERE auth = '${req.body.authNum}'`;
+
+  connection.query(sql, (err, rows, fields) => {
+    if (err) {
+      return res.json({
+        validateSuccess: false,
+        message: "인증번호가 맞지 않습니다.",
+      });
+    }
+    return res.json({ validateSuccess: true, message: "인증되었습니다." });
+  });
+});
+
 app.listen(port, () =>
   console.log(`Example app listening on port 
 ${port}!`)

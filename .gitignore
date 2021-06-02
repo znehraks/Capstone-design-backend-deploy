@@ -26,3 +26,5 @@ yarn-error.log*
 .env
 ./database.json
 /database.json
+./email.json
+/email.json
