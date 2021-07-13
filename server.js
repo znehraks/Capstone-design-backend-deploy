@@ -106,7 +106,7 @@ app.post("/add_diy", (req, res) => {
 
 //설문조사 저장 라우터
 app.post("/add_eval", (req, res) => {
-  let sql = `INSERT INTO evaluation(evaluation_category_no, univ_name, T_set, rank01_score, rank02_score, rank03_score, rank04_score, rank05_score) values (${req.body.evaluation_category_no}, '${req.body.univ_name}', '${req.body.T_set}', ${req.body.rank01_score}, ${req.body.rank02_score}, ${req.body.rank03_score}, ${req.body.rank04_score}, ${req.body.rank05_score})`;
+  let sql = `INSERT INTO evaluation(evaluation_category_no, univ_name, T_set, rank01_score, rank02_score, rank03_score, rank04_score, rank05_score, user_no) values (${req.body.evaluation_category_no}, '${req.body.univ_name}', '${req.body.T_set}', ${req.body.rank01_score}, ${req.body.rank02_score}, ${req.body.rank03_score}, ${req.body.rank04_score}, ${req.body.rank05_score}, ${req.body.user_no})`;
 
   connection.query(sql, (err, rows, fields) => {
     res.send(rows);
@@ -157,6 +157,7 @@ app.post("/signin", (req, res) => {
       res.cookie("user", token).status(200).json({
         loginSuccess: true,
         userId: user[0].user_id,
+        user_no: user[0].user_no,
       });
     } else {
       return res.json({
@@ -196,7 +197,7 @@ app.post("/sendEmail", async (req, res) => {
   let mailOptions = await transporter.sendMail({
     from: `저기어때.`,
     to: req.body.user_email,
-    subject: "저기어때. 회원가입을 위한 인증번호를 입력해주세요.",
+    subject: "유니방시티 회원가입을 위한 인증번호를 입력해주세요.",
     html: emailTemplete,
   });
 
@@ -222,6 +223,20 @@ app.post("/validate", (req, res) => {
       });
     }
     return res.json({ validateSuccess: true, message: "인증되었습니다." });
+  });
+});
+
+//추천이력 조회 - diy
+app.get("/getDiyHistory/:user_id", (req, res) => {
+  let sql = `SELECT * FROM diy_reco_history WHERE user_no = (SELECT user_no FROM user WHERE user_id = '${req.params.user_id}')`;
+  connection.query(sql, (err, rows, fields) => {
+    if (err) {
+      return res.json({
+        loadSuccess: false,
+        message: "오류가 발생했습니다.",
+      });
+    }
+    return res.send(rows);
   });
 });
 
