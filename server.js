@@ -195,7 +195,7 @@ app.post("/sendEmail", async (req, res) => {
   });
 
   let mailOptions = await transporter.sendMail({
-    from: `저기어때.`,
+    from: "유니방시티",
     to: req.body.user_email,
     subject: "유니방시티 회원가입을 위한 인증번호를 입력해주세요.",
     html: emailTemplete,
